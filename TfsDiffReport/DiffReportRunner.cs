@@ -43,14 +43,7 @@ namespace TfsDiffReport
 
         public void GenerateReport()
         {
-            if (_options.FirstChangeset == _options.LastChangeset)
-            {
-                GenerateReportForChangeset(_options.FirstChangeset);
-            }
-            else
-            {
-                Parallel.For(_options.FirstChangeset, _options.LastChangeset, GenerateReportForChangeset);
-            }
+            Parallel.For(_options.FirstChangeset, _options.LastChangeset + 1, GenerateReportForChangeset);
         }
 
         private void GenerateReportForChangeset(int changesetId)
