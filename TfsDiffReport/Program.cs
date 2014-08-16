@@ -17,6 +17,7 @@ namespace TfsDiffReport
             }
 
 #if DEBUG
+            Console.WriteLine("All done.");
             Console.ReadLine();
 #endif
         }
