@@ -10,13 +10,6 @@ namespace TfsDiffReport
 {
     public class DiffReportRunner
     {
-        private static readonly DiffOptions DiffOptions = new DiffOptions
-            {
-                UseThirdPartyTool = false,
-                OutputType = DiffOutputType.Context,
-                ContextLines = 0
-            };
-
         private readonly Options _options;
         private VersionControlServer _sourceControl;
 
@@ -164,8 +157,15 @@ namespace TfsDiffReport
             {
                 WriteHeader(writer, changeset);
 
-                DiffOptions.StreamWriter = writer;
-                Difference.DiffFiles(_sourceControl, origItem, newItem, DiffOptions, null, true);
+                var diffOptions = new DiffOptions
+                    {
+                        UseThirdPartyTool = false,
+                        OutputType = DiffOutputType.Context,
+                        ContextLines = 0,
+                        StreamWriter = writer
+                    };
+
+                Difference.DiffFiles(_sourceControl, origItem, newItem, diffOptions, null, true);
             }
         }
 
