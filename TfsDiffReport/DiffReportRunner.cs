@@ -36,7 +36,17 @@ namespace TfsDiffReport
 
         public void GenerateReport()
         {
-            Parallel.For(_options.FirstChangeset, _options.LastChangeset + 1, GenerateReportForChangeset);
+            Parallel.For(_options.FirstChangeset, _options.LastChangeset + 1, i =>
+                {
+                    try
+                    {
+                        GenerateReportForChangeset(i);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.Error.WriteLine("Failed report for C{0}. Exception: {1}\r\n", i, ex.Message);
+                    }
+                });
         }
 
         private void GenerateReportForChangeset(int changesetId)
@@ -44,36 +54,41 @@ namespace TfsDiffReport
             Changeset changeset = _sourceControl.GetChangeset(changesetId);
             Change[] changes = _sourceControl.GetChangesForChangeset(changesetId, false, Int32.MaxValue, null);
 
-            foreach (Change change in changes)
-            {
-                if (change.Item.ItemType == ItemType.Folder)
-                    continue;
-
-                // filter by path if needed
-                if (_options.Paths != null)
-                    if (!_options.Paths.Any(change.Item.ServerItem.StartsWith))
-                        continue;
-
-                // filter by extension
-                if (!_options.Extensions.Any(change.Item.ServerItem.EndsWith))
-                    continue;
-
-                var itemName = change.Item.ServerItem.Substring(change.Item.ServerItem.LastIndexOf('/') + 1);
-                string diffFileName = String.Format("{0}_{1}.diff", changesetId, itemName);
-
-                if (change.ChangeType.HasFlag(ChangeType.Add) || change.ChangeType.HasFlag(ChangeType.Undelete))
+            Parallel.ForEach(changes.Where(c => c.Item.ItemType == ItemType.File), change =>
                 {
-                    GenerateAddOrUndeleteReport(diffFileName, changeset, change);
-                }
-                else if (change.ChangeType.HasFlag(ChangeType.Delete))
-                {
-                    GenerateDeleteReport(diffFileName, changeset, change);
-                }
-                else if (change.ChangeType.HasFlag(ChangeType.Edit))
-                {
-                    GenerateEditReport(diffFileName, changeset, change);
-                }
-            }
+                    // filter by path if needed
+                    if (_options.Paths != null)
+                        if (!_options.Paths.Any(change.Item.ServerItem.StartsWith))
+                            return;
+
+                    // filter by extension
+                    if (!_options.Extensions.Any(change.Item.ServerItem.EndsWith))
+                        return;
+
+                    var itemName = change.Item.ServerItem.Substring(change.Item.ServerItem.LastIndexOf('/') + 1);
+                    var diffFileName = String.Format("{0}_{1}.diff", changesetId, itemName);
+
+                    try
+                    {
+                        if (change.ChangeType.HasFlag(ChangeType.Add) || change.ChangeType.HasFlag(ChangeType.Undelete))
+                        {
+                            GenerateAddOrUndeleteReport(diffFileName, changeset, change);
+                        }
+                        else if (change.ChangeType.HasFlag(ChangeType.Delete))
+                        {
+                            GenerateDeleteReport(diffFileName, changeset, change);
+                        }
+                        else if (change.ChangeType.HasFlag(ChangeType.Edit))
+                        {
+                            GenerateEditReport(diffFileName, changeset, change);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.Error.WriteLine("Failed C{0}: {1}. Exception: {2}\r\n",
+                                                changesetId, change.Item.ServerItem, ex.Message);
+                    }
+                });
         }
 
         /// <summary>
