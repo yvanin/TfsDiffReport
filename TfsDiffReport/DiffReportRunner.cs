@@ -10,6 +10,8 @@ namespace TfsDiffReport
 {
     public class DiffReportRunner
     {
+        private static readonly object Lock = new object();
+
         private readonly Options _options;
         private VersionControlServer _sourceControl;
 
@@ -66,7 +68,20 @@ namespace TfsDiffReport
                         return;
 
                     var itemName = change.Item.ServerItem.Substring(change.Item.ServerItem.LastIndexOf('/') + 1);
-                    var diffFileName = String.Format("{0}_{1}.diff", changesetId, itemName);
+
+                    string diffFileName;
+                    lock (Lock)
+                    {
+                        diffFileName = String.Format("{0}_{1}.diff", changesetId, itemName);
+
+                        int i = 1;
+                        while (File.Exists(diffFileName))
+                        {
+                            i++;
+                            diffFileName = String.Format("{0}_{1} ({2}).diff", changesetId, itemName, i);
+                        }
+                        File.Create(diffFileName).Close();
+                    }
 
                     try
                     {
